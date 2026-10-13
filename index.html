@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="tr"><head><meta name="robots" content="noindex"><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes"><meta name="theme-color" content="#14102a">
+<title>Coin Yakala</title>
+<style>
+html,body{margin:0;height:100%;overflow:hidden;background:#14102a;touch-action:none;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none;font-family:-apple-system,system-ui,sans-serif;color:#fff}
+canvas{display:block;position:fixed;inset:0;width:100%;height:100%}
+.ov{position:fixed;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;background:rgba(10,6,30,.72);backdrop-filter:blur(3px);padding:24px;box-sizing:border-box}
+.hid{display:none}
+h1{font-size:46px;margin:0 0 6px;background:linear-gradient(90deg,#ffd84d,#9945ff,#14f195);-webkit-background-clip:text;background-clip:text;color:transparent}
+p{opacity:.9;line-height:1.5;margin:6px 0}
+button.big{margin-top:22px;font-size:24px;font-weight:700;padding:16px 46px;border:0;border-radius:40px;color:#14102a;background:linear-gradient(90deg,#14f195,#ffd84d);box-shadow:0 6px 24px rgba(20,241,149,.4)}
+#mute{position:fixed;right:max(12px,env(safe-area-inset-right));bottom:max(12px,env(safe-area-inset-bottom));font-size:24px;background:rgba(255,255,255,.12);border:0;border-radius:50%;width:48px;height:48px;color:#fff;z-index:5}
+.big-emoji{font-size:64px}
+</style></head><body>
+<canvas id="c"></canvas>
+<div id="start" class="ov"><div class="big-emoji">🪙👛</div><h1>Coin Yakala</h1>
+<p>Parmağınla cüzdanı sağa sola kaydır.<br>🪙 🐸 🐶 ◎ coinleri yakala, puan topla!</p>
+<p>🌟 Altın coin = <b>x5 puan</b><br>💣 RUG bombasından kaç! 3 canın var ❤️</p>
+<p id="hs1"></p><button class="big" id="bStart">Başla</button></div>
+<div id="over" class="ov hid"><div class="big-emoji">💥</div><h1>Oyun Bitti</h1>
+<p style="font-size:22px">Puan: <b id="fs">0</b></p><p id="hs2"></p><p id="nr" style="color:#ffd84d;font-weight:700"></p>
+<button class="big" id="bAgain">Tekrar Oyna</button></div>
+<button id="mute" aria-label="Ses">🔊</button>
+<script>
+(()=>{const cv=document.getElementById('c'),ctx=cv.getContext('2d');let W,H,D;
+function rs(){D=Math.min(window.devicePixelRatio||1,3);W=innerWidth;H=innerHeight;cv.width=W*D;cv.height=H*D;ctx.setTransform(D,0,0,D,0,0)}addEventListener('resize',rs);rs();
+const KEY='coinYakalaRekor';let best=+localStorage.getItem(KEY)||0;
+let muted=localStorage.getItem('coinYakalaSes')==='0';const mb=document.getElementById('mute');mb.textContent=muted?'🔇':'🔊';
+let ac=null;function snd(f,d,t='sine',v=.15,f2){if(muted)return;try{ac=ac||new (window.AudioContext||window.webkitAudioContext)();const o=ac.createOscillator(),g=ac.createGain(),n=ac.currentTime;o.type=t;o.frequency.setValueAtTime(f,n);if(f2)o.frequency.exponentialRampToValueAtTime(f2,n+d);g.gain.setValueAtTime(v,n);g.gain.exponentialRampToValueAtTime(.001,n+d);o.connect(g).connect(ac.destination);o.start(n);o.stop(n+d)}catch(e){}}
+mb.onclick=e=>{e.stopPropagation();muted=!muted;localStorage.setItem('coinYakalaSes',muted?'0':'1');mb.textContent=muted?'🔇':'🔊';if(!muted)snd(660,.1)};
+const P={x:0,w:90,tx:0};let items=[],parts=[],floats=[],score,lives,t,spawnT,speed,run=false,shake=0,last=0;
+const COINS=['🪙','🐸','🐶','◎'];
+function reset(){score=0;lives=3;t=0;spawnT=0;speed=1;items=[];parts=[];floats=[];P.x=P.tx=W/2}
+function spawn(){const r=Math.random(),bombP=Math.min(.18+t/400,.38);let k;if(r<.04)k='gold';else if(r<.04+bombP)k='bomb';else k='coin';
+items.push({k,e:k==='gold'?'🌟':k==='bomb'?'💣':COINS[Math.random()*4|0],x:30+Math.random()*(W-60),y:-40,vy:(150+Math.random()*80)*speed,r:22,rot:0,vr:(Math.random()-.5)*3})}
+function burst(x,y,c,n){for(let i=0;i<n;i++){const a=Math.random()*6.28,s=60+Math.random()*220;parts.push({x,y,vx:Math.cos(a)*s,vy:Math.sin(a)*s-80,l:.7,c})}}
+function mv(cx){P.tx=cx}
+cv.addEventListener('pointerdown',e=>mv(e.clientX));cv.addEventListener('pointermove',e=>mv(e.clientX));
+document.addEventListener('touchmove',e=>e.preventDefault(),{passive:false});document.addEventListener('gesturestart',e=>e.preventDefault());
+let keys={};addEventListener('keydown',e=>keys[e.key]=1);addEventListener('keyup',e=>keys[e.key]=0);
+function upd(dt){t+=dt;speed=1+t/45;if(keys.ArrowLeft)P.tx-=500*dt;if(keys.ArrowRight)P.tx+=500*dt;
+P.tx=Math.max(P.w/2,Math.min(W-P.w/2,P.tx));P.x+=(P.tx-P.x)*Math.min(1,dt*18);
+spawnT-=dt;if(spawnT<=0){spawn();spawnT=Math.max(.28,.85-t/120)}
+const py=H-90;for(let i=items.length-1;i>=0;i--){const o=items[i];o.y+=o.vy*dt;o.rot+=o.vr*dt;
+if(o.y>py-20&&o.y<py+25&&Math.abs(o.x-P.x)<P.w/2+12){items.splice(i,1);
+if(o.k==='bomb'){lives--;shake=.4;burst(o.x,o.y,'#ff4d4d',26);floats.push({x:o.x,y:o.y,s:'RUG! 💀',c:'#ff5c5c',l:1});snd(160,.4,'sawtooth',.2,50);if(navigator.vibrate)navigator.vibrate(120);if(lives<=0)end()}
+else{const p=o.k==='gold'?50:10;score+=p;burst(o.x,o.y,o.k==='gold'?'#ffd84d':'#14f195',o.k==='gold'?30:12);floats.push({x:o.x,y:o.y,s:'+'+p+(o.k==='gold'?' x5!':''),c:o.k==='gold'?'#ffd84d':'#14f195',l:1});o.k==='gold'?(snd(880,.12,'square',.1),setTimeout(()=>snd(1320,.2,'square',.1),90)):snd(700+Math.random()*200,.1,'triangle',.15,1200)}continue}
+if(o.y>H+40)items.splice(i,1)}
+for(let i=parts.length-1;i>=0;i--){const p=parts[i];p.x+=p.vx*dt;p.y+=p.vy*dt;p.vy+=500*dt;p.l-=dt;if(p.l<=0)parts.splice(i,1)}
+for(let i=floats.length-1;i>=0;i--){const f=floats[i];f.y-=60*dt;f.l-=dt;if(f.l<=0)floats.splice(i,1)}shake=Math.max(0,shake-dt)}
+const stars=Array.from({length:60},()=>({x:Math.random(),y:Math.random(),s:Math.random()*1.6+.4}));
+function draw(){const g=ctx.createLinearGradient(0,0,0,H);g.addColorStop(0,'#1d1147');g.addColorStop(1,'#0b0820');ctx.fillStyle=g;ctx.fillRect(0,0,W,H);
+ctx.save();if(shake>0)ctx.translate((Math.random()-.5)*16*shake,(Math.random()-.5)*16*shake);
+const tm=performance.now()/1000;ctx.fillStyle='#fff';for(const s of stars){ctx.globalAlpha=.3+.3*Math.sin(tm*2+s.x*20);ctx.fillRect(s.x*W,((s.y*H+tm*12*s.s)%H),s.s,s.s)}ctx.globalAlpha=1;
+ctx.textAlign='center';ctx.textBaseline='middle';
+for(const o of items){ctx.save();ctx.translate(o.x,o.y);ctx.rotate(o.rot*.3);if(o.k==='gold'){ctx.shadowColor='#ffd84d';ctx.shadowBlur=25}if(o.k==='bomb'){ctx.shadowColor='#ff3030';ctx.shadowBlur=18}
+if(o.e==='◎'){ctx.fillStyle='#9945ff';ctx.beginPath();ctx.arc(0,0,20,0,7);ctx.fill();ctx.fillStyle='#14f195';ctx.font='bold 22px system-ui';ctx.fillText('◎',0,1)}else{ctx.font='40px system-ui';ctx.fillText(o.e,0,0)}
+if(o.k==='bomb'){ctx.shadowBlur=0;ctx.fillStyle='#ff4d4d';ctx.font='bold 11px system-ui';ctx.fillText('RUG',0,28)}ctx.restore()}
+const py=H-90;ctx.save();ctx.translate(P.x,py);ctx.shadowColor='#14f195';ctx.shadowBlur=20;const gr=ctx.createLinearGradient(-P.w/2,0,P.w/2,0);gr.addColorStop(0,'#9945ff');gr.addColorStop(1,'#14f195');ctx.fillStyle=gr;
+ctx.beginPath();ctx.roundRect?ctx.roundRect(-P.w/2,-14,P.w,38,12):ctx.rect(-P.w/2,-14,P.w,38);ctx.fill();ctx.shadowBlur=0;ctx.font='26px system-ui';ctx.fillText('👛',0,5);ctx.restore();
+for(const p of parts){ctx.globalAlpha=Math.max(0,p.l/.7);ctx.fillStyle=p.c;ctx.fillRect(p.x-2,p.y-2,4,4)}ctx.globalAlpha=1;
+for(const f of floats){ctx.globalAlpha=Math.max(0,f.l);ctx.fillStyle=f.c;ctx.font='bold 20px system-ui';ctx.fillText(f.s,f.x,f.y)}ctx.globalAlpha=1;ctx.restore();
+if(run||score){const top=Math.max(14,(window.visualViewport?0:0)+14);ctx.textAlign='left';ctx.font='bold 26px system-ui';ctx.fillStyle='#fff';ctx.fillText('🪙 '+score,16,top+28);ctx.font='14px system-ui';ctx.fillStyle='#bbb';ctx.fillText('Rekor: '+Math.max(best,score),16,top+56);
+ctx.textAlign='right';ctx.font='24px system-ui';ctx.fillText('❤️'.repeat(Math.max(0,lives))+'🖤'.repeat(3-Math.max(0,lives)),W-16,top+28)}}
+function loop(n){const dt=Math.min(.05,(n-last)/1000||0);last=n;if(run)upd(dt);else{for(const o of items)o.y+=40*dt}draw();requestAnimationFrame(loop)}
+const S=document.getElementById('start'),O=document.getElementById('over');
+function hsTxt(){return best?'🏆 Rekor: '+best:''}document.getElementById('hs1').textContent=hsTxt();
+function begin(e){e&&e.stopPropagation();reset();S.classList.add('hid');O.classList.add('hid');run=true;snd(520,.12,'triangle',.15,880)}
+function end(){run=false;let nr=false;if(score>best){best=score;localStorage.setItem(KEY,best);nr=true}
+document.getElementById('fs').textContent=score;document.getElementById('hs2').textContent=hsTxt();document.getElementById('nr').textContent=nr?'🎉 Yeni rekor!':'';
+setTimeout(()=>O.classList.remove('hid'),500)}
+document.getElementById('bStart').onclick=begin;document.getElementById('bAgain').onclick=begin;
+reset();for(let i=0;i<6;i++){spawn();items[i].y=Math.random()*H*.7}score=0;requestAnimationFrame(loop);
+window.__game={get score(){return score},get lives(){return lives},get run(){return run}};})();
+</script></body></html>
